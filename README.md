@@ -5,6 +5,10 @@ MQTT Shell to IRC Bridge
 This is an irc bridge for mqtt shells. Data is base64 encoded/decoded <br>
 so you might want to remove that if you data is not. <br><br>
 
+# Requirements:
+
+- paho-mqtt (pip install paho-mqtt) or pip install -r requirements.txt
+
 # Usage:
 
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing , to an irc server in channel #mqtt:
