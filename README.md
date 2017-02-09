@@ -12,7 +12,7 @@ so you might want to remove that if you data is not. <br><br>
 # Usage:
 
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing , to an irc server in channel #mqtt:
-  python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -i '#mqtt'
+  python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667
 - To send a message, type "@cmd \<message to send here\>"
 
 # TODO:
