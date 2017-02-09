@@ -7,7 +7,19 @@ so you might want to remove that if you data is not. <br><br>
 
 # Usage:
 
-- Fire it up. To send a message, type "@cmd message to send here"
+- To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing , to an irc server in channel #mqtt:
+  python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -i '#mqtt'
+- To send a message, type "@cmd \<message to send here\>"
+
+# TODO:
+
+- implement irc tls
+- implement mqtt cert auth
+- add option to switch off base64
+- add option to switch off json decoding (both of these you can easily edit the script to accomplish)
+- add message encryption support (maybe, might be better to just use mqtt TLS)
+- add options to argparse to grab desired json fields
+- add options to change/specifiy topics while running
 
 <pre>
                                               _..._     
