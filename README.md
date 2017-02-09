@@ -19,8 +19,8 @@ so you might want to remove that if you data is not. <br><br>
 
 - implement irc tls
 - implement mqtt cert auth
-- add option to switch off base64
-- add option to switch off json decoding (both of these you can easily edit the script to accomplish)
+- add option to switch off base64 (program tries to handle this itself for incoming messages)
+- add option to switch off json decoding (program handles incoming messages okay, but the program can be easily edited to remove json or base64 entirely if need be. outgoing messages will be encoded in base64, not json.)
 - add message encryption support (maybe, might be better to just use mqtt TLS)
 - add options to argparse to grab desired json fields
 - add options to change/specifiy topics while running
