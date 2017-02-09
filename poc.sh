@@ -1,5 +1,6 @@
 #!/bin/bash
 # Proof of concept mqtt to irc bridge in shell
+# Requires irctk: https://a3nm.net/git/irctk, and mosquitto_clients (likely available in your distor's repos)
 host='localhost'
 user='admin'
 ident='admin'
