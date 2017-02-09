@@ -28,7 +28,7 @@ so you might want to remove that if you data is not. <br><br>
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-usage: ircmq4.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
+usage: ircmq.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
                  [-s MQ_SUBTOP] [-t MQ_PUBTOP] [-i IRC_HOST] [-I IRC_PORT]
                  [-n IRC_NICK] [-c IRC_CHAN]
 
