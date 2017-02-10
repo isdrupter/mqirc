@@ -48,6 +48,10 @@ priv_user=""
 data = ''
 
 
+def isAscii(s):
+    return all(ord(c) < 128 for c in s)
+
+
 
 def b64encode(s, altchars=None):
     encoded = binascii.b2a_base64(s)[:-1]
@@ -90,36 +94,46 @@ def parse_message(s):
     return args
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc) + "\n")
+    print("Connected with result code "+str(rc))
     client.subscribe(mq_subtop)
 
 def on_message(client, userdata, msg):
     message = str(msg.payload)
-    try:
-        decoded = urlsafe_b64decode(str(message))
-    except Exception as e:
-        if message:
-            print("Plaintext: %s" % message)
-            s.send("PRIVMSG %s :%s \n" %(CHANNEL, message))
-    else:
-        #print(decoded)
-        decoded = decoded.replace("\"bot version:", "\"bot version\":") # hack cause my json was invalid
-        print(decoded)
+    if verbose:
+        print("Received message")
+    if not base64_on:
+        if debug:
+            print("Not attempting base64 decode since -b was not specified")
+        s.send("PRIVMSG %s :%s \n" %(CHANNEL, message))
+    else:     
         try:
-            parsed_json = json.loads(decoded)
+            decoded = urlsafe_b64decode(str(message))
         except Exception as e:
-            #pass
-            print("Error %s" % e)
-            #print(decoded)
-            if decoded:
-                s.send("PRIVMSG %s :%s \n" %(CHANNEL, decoded))
+            if debug:
+                print("Plaintext: %s" % message)
+            if isAscii(message):
+                s.send("PRIVMSG %s :%s \n" %(CHANNEL, message))
+                return
         else:
-            parsed_ip = (parsed_json['ip'])
-            parsed_msg = (parsed_json['output'])
-            #, 'status', 'cmdline', 'output'
-            #print(parsed_msg)
-            print("Parsed JSON: %s %s \n" %(parsed_ip, parsed_msg))
-            s.send("PRIVMSG %s :%s %s \n" %(CHANNEL, parsed_ip, parsed_msg))
+            decoded = decoded.replace("\"bot version:", "\"bot version\":") # hack cause my json was invalid
+            if debug:
+                print(decoded)
+            try:
+                parsed_json = json.loads(decoded)
+            except Exception as e:
+                if debug:
+                    print("Error %s" % e)
+                #print(decoded)
+                if decoded:
+                    s.send("PRIVMSG %s :%s \n" %(CHANNEL, decoded))
+            else:
+                parsed_ip = (parsed_json['ip'])
+                parsed_msg = (parsed_json['output'])
+                #, 'status', 'cmdline', 'output'
+                #print(parsed_msg)
+                if debug:
+                    print("Parsed JSON: %s %s \n" %(parsed_ip, parsed_msg))
+                s.send("PRIVMSG %s :%s %s \n" %(CHANNEL, parsed_ip, parsed_msg))
 
 def connect_mqtt():
     client = mqtt.Client()
@@ -149,7 +163,7 @@ def connect_irc():
         print("Connecting to mqtt...")
     connect_mqtt()
 #### SESSION MUST START LIKE THIS ########################################
-    if debug:
+    if verbose:
         print("Connecting to irc with nick %s ...\n" % NICK)
     s.send("NICK %s\r\n" % NICK)
     s.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
@@ -158,18 +172,18 @@ def connect_irc():
 
 
 def part_chan(CHANNEL_):
-    if debug:
+    if verbose:
         print("Leaving channel %s" % CHANNEL_)
     s.send("PART %s \r\n" % CHANNEL_)
 
 def bot_usage(action, recipitent):
     if debug:
-        print("Sending to : %s " % action)
+        print("Sending as : %s " % action)
     s.send("%s %s : ==== MQIRC Bot Usage ====: \r\n" %(action, recipitent))
     s.send("%s %s : Bot responds to the following commands: \r\n" % (action, recipitent))
-    s.send("%s %s : @cmd <message>: Send a message to pubtopic \r\n" % (action, recipitent))
-    s.send("%s %s : @help : Show this help \r\n" % (action, recipitent))
-    s.send("%s %s : @die : Shut down bot \r\n" % (action, recipitent))
+    s.send("%s %s : !cmd <message>: Send a message to pubtopic \r\n" % (action, recipitent))
+    s.send("%s %s : !help : Show this help \r\n" % (action, recipitent))
+    s.send("%s %s : !die : Shut down bot \r\n" % (action, recipitent))
     
 #### Listen for incoming data
 def listen_irc():
@@ -185,25 +199,25 @@ def listen_irc():
             line=string.rstrip(line)
             line=string.split(line)
             if(line[0]=="PING"):
-                if debug:
+                if verbose:
                     print("Received PING, sending PONG")
                 s.send("PONG %s\r\n" % line[1])
                 pong_once+=1
-                while (pong_once > 1):
-                    pass
-                else:
+                if (pong_once == 1):
                     join_irc(CHANNEL)
-                    pong_once=0
-            elif line[1]=="PRIVMSG":
+            elif (line[1]=="PRIVMSG" or line[1]=="NOTICE"):
+                action=line[1]
+                if verbose:
+                    print("Received %s" % action)
                 if debug:
-                    print("Received privmsg :\r\n %s" % (line[-1]))
-                
-                action = "PRIVMSG"
-                recipitent = priv_user
-                if re.match('^[@cmd\w].*$', line[-1]):
-                    if debug:
-                        print(" Received a command. Parsing and sending message...")
-                        print
+                    print("Contents of received %s :\r\n %s" % (action, line[-1]))
+                if action=="NOTICE":
+                    recipitent = priv_user
+                elif action=="PRIVMSG":
+                    recipitent = CHANNEL
+                if re.match('^[!cmd\w].*$', line[-1]):
+                    if verbose:
+                        print("Received a command")
                     res = parse_message(str(line))
                     final = ''
                     for i in range(3, len(res)):
@@ -211,60 +225,35 @@ def listen_irc():
                         final = final.replace("'", "")
                         final = final.replace(",", " ")
                     final = final[:-1]
+                    if verbose:
+                        print("Publishing message")
                     if debug:
-                        print("Publishing message: \r\n %s : " % final)
-                    final = b64encode(final)
-                    if debug:
-                        print("Encoded message: \r\n %s" % final)
+                        print("Parsing message with contents: \r\n %s : " % final)
+                    if base64_on:
+                        if verbose:
+                            print("Encoding message...")
+                        final = b64encode(final)
+                        if debug:
+                            print("Encoded message: \r\n %s" % final)
                     try:
                         mqsend(final)
                     except Exception as e:
+                        if verbose:
+                            print("Failed to publish message!")
                         if debug:
-                            print("Some error: %s" % e)
-                elif re.match(r'^:??@help.*$', line[-1]):
-                    if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:??!help.*$', line[-1]):
+                    if verbose:
                         print("Sending usage\n")
                     bot_usage(action, recipitent)
-                else:
-                    pass
-            elif line[1]=="NOTICE":
-                if debug:
-                    print("Received notice...")
-                action = "NOTICE"
-                recipitent = priv_user
-                if re.match('^[@cmd\w].*$', line[-1]):
-                    if debug:
-                        print(" Received a command. Parsing and sending message...")
-                    res = parse_message(str(line))
-                    final = ''
-                    for i in range(3, len(res)):
-                        final = final + str(res[i])
-                        final = final.replace("'", "")
-                        final = final.replace(",", " ")
-                    final = final[:-1]
-                    if debug:
-                        print("Publishing message: \r\n %s : " % final)
-                    final = b64encode(final)
-                    if debug:
-                        print("Encoded message: \r\n %s" % final)
-                    try:
-                        mqsend(final)
-                    except Exception as e:
-                        if debug:
-                            print("Some error: %s" % e)
-                elif re.match(r'^:??@help.*$', line[-1]):
-                    #res = parse_message(str(line))
-                    #print("Notice from %s" % priv_user)
-                    if debug:
-                        print("Sending usage...")
-                    bot_usage(action, recipitent)
-                elif re.match(r'^:??@die.*$', line[-1]):
-                    if debug:
+                elif re.match(r'^:??!die.*$', line[-1]):
+                    if verbose:
                         print("Shutting down...")
-                    s.send("PRIVMSG %s : Shutting down... \n" %(priv_user))
+                    s.send("PRIVMSG %s : Shutting down... \n" %(CHANNEL))
                     sys.exit(0)
                 else:
                     pass
+      
 
 
 parser = argparse.ArgumentParser()
@@ -280,6 +269,9 @@ parser.add_argument('-n','--irc_nick',default='mqirc', help='Nick of irc user')
 parser.add_argument('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
 parser.add_argument('-U','--priv_user',default='user', help='Irc bot owner')
 parser.add_argument('-d','--debug', nargs='?', default=False, help='Print debug messages')
+parser.add_argument('-v','--verbose', nargs='?', default=False, help='Verbose mode')
+parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
+
 
 
 
@@ -297,6 +289,8 @@ irc_nick = ns.irc_nick if ns.irc_nick is not None else "default_irc_nick"
 irc_chan = ns.irc_chan if ns.irc_chan is not None else "default_irc_chan"
 priv_user = ns.priv_user if ns.priv_user is not None else "default_priv_user"
 debug = ns.debug if ns.debug is not None else "default_debug"
+verbose = ns.verbose if ns.verbose is not None else "default_verbose"
+base64_on = ns.base64_on if ns.base64_on is not None else "default_base64_on"
 
 HOST = irc_host
 PORT = int(irc_port)
@@ -304,6 +298,13 @@ NICK = irc_nick
 CHANNEL = irc_chan
 
 
+
+if base64_on:
+    base64_on = True
+    print("Base64 ON")
+else:
+    print("Base64 OFF")
+    
 if debug:
     debug = True
     print("Warning: Debug mode is ON")
@@ -311,6 +312,11 @@ if debug:
     print("DEBUG: MQTT Info: %s@%s:%s, subscribe to: %s, publish to: %s " % (mq_user, mq_host, mq_port, mq_subtop, mq_pubtop))
 else:
     print("Debug mode is OFF")
+    
+if verbose:
+    verbose = True
+    print("Verbose mode is ON")
+    print("Connecting to ircd...")
 
 try:
     s=socket.socket( )
