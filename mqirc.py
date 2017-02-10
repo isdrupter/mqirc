@@ -174,9 +174,9 @@ def bot_usage(action, recipitent):
 #### Listen for incoming data
 def listen_irc():
     readbuffer=""
-    
+    pong_once=0
     while 1:
-        pong_once=0
+        
         readbuffer=readbuffer+s.recv(100000)  # O'Reilly's size is too small
         temp=string.split(readbuffer, "\n")  # for some welcome pages
         #print (readbuffer)                   # Print raw output to screen        
