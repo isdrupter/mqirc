@@ -18,23 +18,21 @@ print("""
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 """)
+# imports
 import sys,socket,string,time,re,binascii,base64,operator,json,argparse
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-
-#### Ya, ya not supposed to use globals
+# init variables
 global mq_host
 global mq_port
 global sub_topic
 global pub_topic
 global mq_user
 global mq_pass
-#### 
 global irc_host
 global irc_port
 global irc_nick
 global irc_chan
-#global priv_user
 global debug
 CHANNEL=""
 CHANNEL_=""
@@ -46,19 +44,25 @@ PORT=''
 pong_once=''
 priv_user=""
 data = ''
-
-# Check if string is ;egit
+client=""
+userdata=""
+msg=""
+sent_m=False
+a=""
+b=""
+c=""
+# check if message is valid ascii
 def isAscii(s):
     return all(ord(c) < 128 for c in s)
 
-
-# fix python's stupidity with base64
+# base64 decode
 def b64encode(s, altchars=None):
     encoded = binascii.b2a_base64(s)[:-1]
     if altchars is not None:
         return _translate(encoded, {'+': altchars[0], '/': altchars[1]})
     return encoded
-# check padding
+  
+# handle padding
 def urlsafe_b64decode(s):
       s = str(s).strip()
       try:
@@ -72,10 +76,9 @@ def urlsafe_b64decode(s):
           elif padding == 3:
               s += b'='
           return base64.b64decode(s)
-
+        
+# Parse incoming irc messages for mqtt publish
 def parse_message(s):
-    """Breaks a message from an IRC server into its prefix, command, and arguments.
-    """
     prefix = ''
     trailing = []
     if not s:
@@ -93,10 +96,12 @@ def parse_message(s):
         print ("Parsing message: \r\nPrefix: %s Args: %s Trailing: %s \n" %(prefix, args, trailing))
     return args
 
+ # mqtt connection
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
     client.subscribe(mq_subtop)
 
+# Receive message, try to decode and parse json, then proxy to irc
 def on_message(client, userdata, msg):
     message = str(msg.payload)
     if verbose:
@@ -123,32 +128,47 @@ def on_message(client, userdata, msg):
             except Exception as e:
                 if debug:
                     print("Error %s" % e)
-                #print(decoded)
                 if decoded:
                     s.send("PRIVMSG %s :%s \n" %(CHANNEL, decoded))
             else:
                 parsed_ip = (parsed_json['ip'])
                 parsed_msg = (parsed_json['output'])
-                #, 'status', 'cmdline', 'output' # some other example json fields
                 if debug:
                     print("Parsed JSON: %s %s \n" %(parsed_ip, parsed_msg))
                 s.send("PRIVMSG %s :%s %s \n" %(CHANNEL, parsed_ip, parsed_msg))
-""" Connect to mqtt """
+                
+# wrapper function to count received messsages
+def handle_message(a, b, c):
+    global tcount
+    global rcount
+    global sent_m
+    if not sent_m:
+        tcount=0
+        rcount=0
+    tcount+=1
+    rcount+=1
+    if tcount % 10 == 0:
+        print("Message received: %s" % rcount)
+        tcount=0
+    on_message(a,b,c)
+    sent_m=True
+
+# start mqtt
 def connect_mqtt():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.connect(mq_host, mq_port, 60)
     client.username_pw_set(username=mq_user,password=mq_pass)
-    client.on_message = on_message
+    client.on_message = handle_message
     client.loop_start()
-# publish mqtt message
+    
+# publish mqtt messages
 def mqsend(message):
-    # make the request, should give us back some JSON
     client = mqtt.Client()
     publish.single(mq_pubtop, payload=str(message), hostname=mq_host, port=mq_port,auth = {'username':mq_user, 'password':mq_pass})
 
 
-#### Join channel, set modes
+# Join channel, called after first pong
 def join_irc(CHANNEL_):
     if debug:
         print("Joining %s" % CHANNEL_)
@@ -156,12 +176,11 @@ def join_irc(CHANNEL_):
     s.send("JOIN %s\r\n" % CHANNEL_)
     s.send("MODE %s +v \r\n"% NICK)
 
-# Start the irc session
+# connect to ircd
 def connect_irc():
     if debug:
         print("Connecting to mqtt...")
     connect_mqtt()
-
     if verbose:
         print("Connecting to irc with nick %s ...\n" % NICK)
     s.send("NICK %s\r\n" % NICK)
@@ -169,12 +188,13 @@ def connect_irc():
     time.sleep(2)
     join_irc(CHANNEL)
 
-""" For future usage """
+# for future use
 def part_chan(CHANNEL_):
     if verbose:
         print("Leaving channel %s" % CHANNEL_)
     s.send("PART %s \r\n" % CHANNEL_)
-# Send usage
+
+# return usage
 def bot_usage(action, recipitent):
     if debug:
         print("Sending as : %s " % action)
@@ -184,10 +204,11 @@ def bot_usage(action, recipitent):
     s.send("%s %s : !help : Show this help \r\n" % (action, recipitent))
     s.send("%s %s : !die : Shut down bot \r\n" % (action, recipitent))
     
-#### Magic starts here
+# Listen for and handle incoming data
 def listen_irc():
     readbuffer=""
-    pong_once=0 # this is important! **
+    scount=0
+    pong_once=0
     while 1:
         
         readbuffer=readbuffer+s.recv(1000000)  
@@ -201,7 +222,6 @@ def listen_irc():
                 if verbose:
                     print("Received PING, sending PONG")
                 s.send("PONG %s\r\n" % line[1])
-                """ Some ircd's dont let you join a channel until after you reply with a pong (ie, ngircd) """
                 pong_once+=1
                 if (pong_once == 1):
                     join_irc(CHANNEL)
@@ -211,26 +231,27 @@ def listen_irc():
                     print("Received %s" % action)
                 if debug:
                     print("Contents of received %s :\r\n %s" % (action, line))
+                if action=="NOTICE" and not notice:
+                    pass
                 if action=="NOTICE":
-                    recipitent = priv_user # todo: reply to user that sent the notice
+                    recipitent = priv_user
                 elif action=="PRIVMSG":
                     recipitent = CHANNEL
                 if re.match(r'^:!cmd.*$', line[3]):
+                    scount+=1
+                    print("Messages sent: %s" % scount)
                     if verbose:
                         print("Received a command")
-                    # gross code here, but functional
                     res = parse_message(str(line))
                     final = ''
                     for i in range(3, len(res)):
                         final = final + str(res[i])
-                        print(i)
-                        final = final.replace("'", "") # ugly ass hacks
-                        final = final.replace(",", " ") # has trouble with commas and single quotes obviously
+                        final = final.replace("'", "") # gross hacks
+                        final = final.replace(",", " ")
                     final = final[:-1]
                     
                     if debug:
                         print(final)
-                    if verbose:
                         print("Publishing message")
                     if debug:
                         print("Parsing message with contents: \r\n %s " % final)
@@ -260,24 +281,24 @@ def listen_irc():
                 else:
                     pass
       
-# get args
 
+# argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
 parser.add_argument('-p','--mq_port',default='1883', help='Mqtt port to connect to')
 parser.add_argument('-u','--mq_user',default='user', help='Mqtt user to auth with')
-parser.add_argument('-P','--mq_pass',default='passwd', help='Mqtt password to authenticate with')
-parser.add_argument('-s','--mq_subtop',default='stdin', help='Mqtt topic to subscribe to')
-parser.add_argument('-t','--mq_pubtop',default='stdout', help='Mqtt topic to publish to')
+parser.add_argument('-P','--mq_pass',default='pass', help='Mqtt password to authenticate with')
+parser.add_argument('-s','--mq_subtop',default='input', help='Mqtt topic to subscribe to')
+parser.add_argument('-t','--mq_pubtop',default='output', help='Mqtt topic to publish to')
 parser.add_argument('-i','--irc_host',default='localhost', help='Irc host to connect to')
 parser.add_argument('-I','--irc_port',default='6667', help='Irc port to connect to')
 parser.add_argument('-n','--irc_nick',default='mqirc', help='Nick of irc user')
 parser.add_argument('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
-parser.add_argument('-U','--priv_user',default='user', help='Irc bot owner')
+parser.add_argument('-U','--priv_user',default='anon', help='Irc bot owner')
 parser.add_argument('-d','--debug', nargs='?', default=False, help='Print debug messages')
 parser.add_argument('-v','--verbose', nargs='?', default=False, help='Verbose mode')
 parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
-
+parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
 
 
 
@@ -297,13 +318,20 @@ priv_user = ns.priv_user if ns.priv_user is not None else "default_priv_user"
 debug = ns.debug if ns.debug is not None else "default_debug"
 verbose = ns.verbose if ns.verbose is not None else "default_verbose"
 base64_on = ns.base64_on if ns.base64_on is not None else "default_base64_on"
+notice = ns.notice if ns.notice is not None else "default_notice"
 
 HOST = irc_host
 PORT = int(irc_port)
 NICK = irc_nick
 CHANNEL = irc_chan
 
+# print parameter info at startup
 
+if notice:
+    notice=True
+    print("Respond to notice: ON")
+else:
+    print("Respond to notice: OFF")
 
 if base64_on:
     base64_on = True
@@ -313,16 +341,17 @@ else:
 if debug:
     debug = True
     print("Warning: Debug mode is ON")
-    print("DEBUG: IRC Info: %s@%s:%s:%s, owner nick: %s" %(NICK, HOST, PORT, CHANNEL, priv_user))
-    print("DEBUG: MQTT Info: %s@%s:%s, subscribe to: %s, publish to: %s " % (mq_user, mq_host, mq_port, mq_subtop, mq_pubtop))
 else:
     print("Debug mode is OFF")
     
 if verbose:
     verbose = True
     print("Verbose mode is ON")
+    print("IRC Info: %s@%s:%s:%s, owner nick: %s" %(NICK, HOST, PORT, CHANNEL, priv_user))
+    print("MQTT Info: %s@%s:%s, subscribe to: %s, publish to: %s " % (mq_user, mq_host, mq_port, mq_subtop, mq_pubtop))
     print("Connecting to ircd...")
-# start'er up!!!
+
+# program start
 try:
     s=socket.socket( )
     s.connect((HOST, PORT))
