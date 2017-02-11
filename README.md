@@ -1,15 +1,18 @@
 # mqirc
 MQTT Shell to IRC Bridge 
 
+## About
 
-This is an irc bridge for mqtt shells. Data is base64 encoded/decoded <br>
-so you might want to remove that if you data is not. <br><br>
+<p>This is an irc bridge for mqtt shells. By default, program tries to detect whether or not you are using base64 and json and will figure it out, but if you want to send messages in base64, specify -b flag at startup. </p>
 
-# Requirements:
+<p>This was written for use with mqtt shells, but you can use it for pretty much any situation where you want to interact with mqtt over irc.</p>
 
-- paho-mqtt (pip install paho-mqtt) or pip install -r requirements.txt
+## Requirements:
 
-# Usage:
+- paho-mqtt (pip install paho-mqtt) (or)
+  -- pip install -r requirements.txt
+
+## Usage:
 
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing , to an irc server in channel #mqtt:
   python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667
@@ -17,7 +20,7 @@ so you might want to remove that if you data is not. <br><br>
 - To get usage type "!help'
 - To kill the bot, type "!die"
 
-# TODO:
+## TODO:
 
 - implement irc tls
 - implement mqtt cert auth
