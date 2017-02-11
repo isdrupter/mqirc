@@ -13,20 +13,19 @@ so you might want to remove that if you data is not. <br><br>
 
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing , to an irc server in channel #mqtt:
   python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667
-- To send a message, type "@cmd \<message to send here\>"
+- To send a message, type "!cmd \<message to send here\>"
+- To get usage type "!help'
+- To kill the bot, type "!die"
 
 # TODO:
 
 - implement irc tls
 - implement mqtt cert auth
-- add option to switch off base64 (program tries to handle this itself for incoming messages)
-- add option to switch off json decoding (program handles incoming messages okay, but the program can be easily edited to remove json or base64 entirely if need be. outgoing messages will be encoded in base64, not json.)
 - add message encryption support (maybe, might be better to just use mqtt TLS)
-- add options to argparse to grab desired json fields
 - add options to change/specifiy topics while running
 
 <pre>
-                                              _..._     
+                                               _..._     
                    .-''-.                    .-'_..._''.  
  __  __   ___     //'` `\|   .--.          .' .'      '.\ 
 |  |/  `.'   `.  '/'    '|   |__|         / .'            
@@ -43,9 +42,10 @@ so you might want to remove that if you data is not. <br><br>
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-usage: ircmq.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
+usage: ircmq5.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
                  [-s MQ_SUBTOP] [-t MQ_PUBTOP] [-i IRC_HOST] [-I IRC_PORT]
-                 [-n IRC_NICK] [-c IRC_CHAN]
+                 [-n IRC_NICK] [-c IRC_CHAN] [-U PRIV_USER] [-d [DEBUG]]
+                 [-v [VERBOSE]] [-b [BASE64_ON]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -69,6 +69,14 @@ optional arguments:
                         Nick of irc user
   -c IRC_CHAN, --irc_chan IRC_CHAN
                         Irc channel to join
+  -U PRIV_USER, --priv_user PRIV_USER
+                        Irc bot owner
+  -d [DEBUG], --debug [DEBUG]
+                        Print debug messages
+  -v [VERBOSE], --verbose [VERBOSE]
+                        Verbose mode
+  -b [BASE64_ON], --base64_on [BASE64_ON]
+                        Base64
 
 </pre>
 
