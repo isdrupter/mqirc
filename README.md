@@ -9,15 +9,15 @@ MQTT Shell to IRC Bridge
 
 ## Requirements:
 
-- paho-mqtt<br> :
- --pip install paho-mqtt (or)<br>
- --pip install -r requirements.txt<br>
+- paho-mqtt<br> 
+ --install on linux : pip install paho-mqtt <br>
+ -- alternatively: pip install -r requirements.txt<br>
 
 ## Usage:
 
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing ,<br>
-  to an irc server in channel #mqtt:
-  python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667
+  to an irc server in channel #mqtt:<br>
+  `python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667`
 - To send a message, "@cmd \<message to send here\>"
 - To get usage, "@help'
 - To kill the bot, "@die"
@@ -27,12 +27,17 @@ MQTT Shell to IRC Bridge
 - To register with nickserv using password supplied with `-a` flag, "@register"
 - To send a raw irc command (example: send a privmsg), "@irc PRIVMSG somebody :hello, somobody!"
 
+## Caveats:
+
+- You may need to configure your irc server to not kick floods if you have a lot of clients (for unreal, compile with fakelag configurable)
+- Currently does not properly parse single quotes in outgoing mqtt messages. This will be fixed soon, use double quotes instead for now.
 ## TODO:
 
+- fix single quote parsing for outgoing mqtt messages
 - implement irc tls
-- implement mqtt cert auth
-- add message encryption support (maybe, might be better to just use mqtt TLS)
+- implement mqtt tls
 - add options to change/specifiy topics while running
+- logging
 
 <pre>
                                               _..._     
