@@ -18,13 +18,13 @@ MQTT Shell to IRC Bridge
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing ,<br>
   to an irc server in channel #mqtt:<br>
   `python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667`
-- To send a message, "@cmd \<message to send here\>"
+- To send a message, "@cmd message to send here>"
 - To get usage, "@help'
 - To kill the bot, "@die"
 - To join a channel, "@join #channel"
 - To part a channel, "@part <#channel>"
 - To make the bot say something, "@echo something"
-- To register with nickserv using password supplied with `-a` flag, "@register"
+- To register with nickserv, "@register password email"
 - To send a raw irc command (example: send a privmsg), "@irc PRIVMSG somebody :hello, somobody!"
 
 ## Caveats:
@@ -104,6 +104,5 @@ optional arguments:
 
 </pre>
 
-# License:
-
-Whatever, just credit me.
+## License:
+GPL Whatever, just credit me.
