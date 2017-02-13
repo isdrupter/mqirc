@@ -45,10 +45,11 @@ MQTT Shell to IRC Bridge
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-usage: mqirc     [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
+usage: ircmq5.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
                  [-s MQ_SUBTOP] [-t MQ_PUBTOP] [-i IRC_HOST] [-I IRC_PORT]
-                 [-n IRC_NICK] [-c IRC_CHAN] [-U PRIV_USER] [-d [DEBUG]]
-                 [-v [VERBOSE]] [-b [BASE64_ON]] [-N [NOTICE]]
+                 [-n IRC_NICK] [-c IRC_CHAN] [-k CHAN_KEY] [-a IRC_AUTH]
+                 [-U PRIV_USER] [-d [DEBUG]] [-v [VERBOSE]]
+                 [-vv [VERY_VERBOSE]] [-b [BASE64_ON]] [-N [NOTICE]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -72,12 +73,18 @@ optional arguments:
                         Nick of irc user
   -c IRC_CHAN, --irc_chan IRC_CHAN
                         Irc channel to join
+  -k CHAN_KEY, --chan_key CHAN_KEY
+                        Channel key
+  -a IRC_AUTH, --irc_auth IRC_AUTH
+                        Password to auth with nickserv
   -U PRIV_USER, --priv_user PRIV_USER
                         Irc bot owner
   -d [DEBUG], --debug [DEBUG]
                         Print debug messages
   -v [VERBOSE], --verbose [VERBOSE]
                         Verbose mode
+  -vv [VERY_VERBOSE], --very_verbose [VERY_VERBOSE]
+                        Very Verbose mode: Print all raw output
   -b [BASE64_ON], --base64_on [BASE64_ON]
                         Base64
   -N [NOTICE], --notice [NOTICE]
