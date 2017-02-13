@@ -337,8 +337,8 @@ def listen_irc(irc_auth,chan_key):
                     if verbose:
                         print("Sending usage\n")
                     bot_usage(action, sender)
-                elif re.match(r'^:@stats.*$',line[3]):
-                    bot_status(action,sender)
+                #elif re.match(r'^:@stats.*$',line[3]):
+                    #bot_status(action,sender)
                 elif re.match(r'^:@die.*$', line[3]):
                     if verbose:
                         print("Shutting down...")
