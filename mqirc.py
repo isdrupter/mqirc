@@ -31,7 +31,7 @@ client="";userdata="";msg=""
 IDENT="mqirc"
 REALNAME="mqirc"
 sent_m=False
-
+dispass=""
 
 def isAscii(s):
     return all(ord(c) < 128 for c in s)
@@ -200,6 +200,12 @@ def register(final, sender_):
     s.send("PRIVMSG nickserv :REGISTER %s\n" %(final))
     s.send("PRIVMSG %s :Registered with nickserv. \r\n" % (sender_))
 
+#def bot_status(action,sender):
+#    if verbose or debug:
+#        print("Sending status to %s" % sender)
+#    s.send("%s %s : MqIRC Bot Stats:" % (action,sender))
+#    s.send("%s %s : Messages sent: %s ,Messages received: %s\r\n" % (action,sender,scount,rcount))
+
 def getnick(data):                          # Return Nickname
     nick = data.split('!')[0]
     nick = nick.replace(':', ' ')
@@ -218,6 +224,16 @@ def getchannel(data):                       # Return Channel
         print ("Get channel: %s" % channel)
     return channel
 
+def bot_auth(_final_,dispass):
+    if debug:
+        print("Testing auth")
+    _final_ = _final_.strip(" ")
+    if _final_==dispass:
+        print("Authentication success.")
+        return True
+    else:
+        print("Authentication failure!")
+        return False
 
 def bot_usage(action, sender):
     if debug:
@@ -228,19 +244,27 @@ def bot_usage(action, sender):
     s.send("%s %s : @help : Show this help \r\n" % (action, sender))
     s.send("%s %s : @die : Shut down bot \r\n" % (action, sender))
     s.send("%s %s : @echo <string> : Echo a message\r\n" % (action, sender))
+    s.send("%s %s : @enable <password> : Authenticate to and enable the bot \r\n" % (action, sender))
+    s.send("%s %s : @disable <password> : Lock bot. When disabled will only respond to @help \r\n" % (action, sender))
+    #s.send("%s %s : @stats : Return bot status \r\n" % (action, sender))
     s.send("%s %s : ======== IRC Commands ========:\r\n" %(action, sender))
     s.send("%s %s : @irc : <command> : Send a raw irc command to server\r\n" % (action, sender))
     s.send("%s %s : @register <password> <email> : Register bot with nickserv\r\n" %(action, sender))
     s.send("%s %s : @join : <channel> : Join this channel\r\n" % (action, sender))
     s.send("%s %s : @part : <channel> : Leave this channel\r\n" % (action, sender))
- 
-
+    # custom commands
+    """
+    s.send("%s %s : ======== Custom Commands ========: \r\n" % (action, sender))
+    s.send("%s %s : @custom <parameters> : something \r\n" % (action, sender))
+    """
 #### Listen for incoming data
-def listen_irc(irc_auth,chan_key):
+def listen_irc(irc_auth,chan_key,dispass):
     global scount
     readbuffer=""
     scount=0
     pong_once=0
+    #global dispass
+    enabled = False
     while True:        
         readbuffer=readbuffer+s.recv(1000000)  
         temp=string.split(readbuffer, "\n")
@@ -285,9 +309,33 @@ def listen_irc(irc_auth,chan_key):
                         sender = getchannel(rawbuffer)
                     except:
                         sender = getnick(rawbuffer)
-
+                # check auth
+            
+                if re.match(r'^:@enable.*$', line[3]):
+                    print("Received auth enable request...")
+                    if not enabled:
+                        if bot_auth(final,dispass):
+                            s.send("%s %s :Sucess. System ready. \r\n" % (action,sender))
+                            enabled = True
+                        else:
+                            s.send("%s %s :Authentication failed.\r\n" % (action,sender))
+                    else:
+                        s.send("%s %s :Already enabled. \r\n" % (action,sender))
+                
+                elif re.match(r'^:@disable.*$', line[3]):
+                    print("Received auth disable request...")
+                    if not enabled:
+                        s.send("%s %s :Already disabled. \r\n" % (action,sender))
+                    else:
+                        if bot_auth(final,dispass):
+                            s.send("%s %s :Success. System locked. \r\n" % (action,sender))
+                            enabled = False
+            
                 #publish mqtt message
-                if re.match(r'^:@cmd.*$', line[3]):
+                elif re.match(r'^:@cmd.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     scount+=1
                     print("Messages sent: %s" % scount)
                     if verbose:
@@ -310,26 +358,41 @@ def listen_irc(irc_auth,chan_key):
                             print("Error:\n %s" % e)
                 # irc commands
                 elif re.match(r'^:@register.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if verbose:
                         print("Registering with nickserv...")
                     register(final, sender)
                     if debug:
                         print("Registered with nickserv: %s" % final)
                 elif re.match(r'^:@irc.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if verbose:
                         print("Sending raw irc command")
                     if debug:
                         print("Received raw irc command:\n%s\n" % final)
                     s.send("%s \r\n" % final)
                 elif re.match(r'^:@echo.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if debug:
                         print("Received PRIVMSG command:\n%s\n" % final)
                     s.send("%s %s :%s\r\n" % (action,sender,final))
                 elif re.match(r'^:@join.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if verbose:
                         print("Received a join command")
                     join_chan(final)
                 elif re.match(r'^:@part.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if verbose:
                         print("Received a part command")
                     part_chan(final)
@@ -340,36 +403,59 @@ def listen_irc(irc_auth,chan_key):
                 #elif re.match(r'^:@stats.*$',line[3]):
                     #bot_status(action,sender)
                 elif re.match(r'^:@die.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
+              """ 
+                elif re.match(r'^:@custom.*$', line[3]):
+                    if not enabled:
+                        s.send("%s %s :Access denied. \r\n" % (action,sender))
+                        break
+                    scount+=1
+                    if verbose or debug:
+                        print("Received a custom command from %s, doing something" % sender)
+                    s.send("%s %s :echo lol \n" % (action,sender))
+                    try:
+                        mqsend("sh /bin/something")
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                            """
                 else:
                     pass
       
 
 
 parser = argparse.ArgumentParser()
-# mqtt options
 parser.add_argument('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
 parser.add_argument('-p','--mq_port',default='1883', help='Mqtt port to connect to')
 parser.add_argument('-u','--mq_user',default='user', help='Mqtt user to auth with')
 parser.add_argument('-P','--mq_pass',default='passwd', help='Mqtt password to authenticate with')
-parser.add_argument('-s','--mq_subtop',default='in', help='Mqtt topic to subscribe to')
-parser.add_argument('-t','--mq_pubtop',default='out', help='Mqtt topic to publish to')
-parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
-# irc options
+parser.add_argument('-s','--mq_subtop',default='datah', help='Mqtt topic to subscribe to')
+parser.add_argument('-t','--mq_pubtop',default='shell', help='Mqtt topic to publish to')
 parser.add_argument('-i','--irc_host',default='localhost', help='Irc host to connect to')
 parser.add_argument('-I','--irc_port',default='6667', help='Irc port to connect to')
 parser.add_argument('-n','--irc_nick',default='mqirc', help='Nick of irc user')
 parser.add_argument('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
 parser.add_argument('-k','--chan_key',default='lolololol', help='Channel key')
 parser.add_argument('-a','--irc_auth',default='empty', help='Password to auth with nickserv')
-parser.add_argument('-U','--priv_user',default='user', help='Irc bot owner')
-parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
-# verbosity options
+parser.add_argument('-K','--bot_key',default='kek', help='Password to auth with bot')
+
+parser.add_argument('-U','--priv_user',default='anon', help='Irc bot owner')
 parser.add_argument('-d','--debug', nargs='?', default=False, help='Print debug messages')
 parser.add_argument('-v','--verbose', nargs='?', default=False, help='Verbose mode')
 parser.add_argument('-vv','--very_verbose', nargs='?', default=False, help='Very Verbose mode: Print all raw output')
+
+parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
+parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
+
+
 
 ns = parser.parse_args()
 
@@ -384,11 +470,13 @@ irc_port = ns.irc_port if ns.irc_port is not None else "default_irc_port"
 irc_nick = ns.irc_nick if ns.irc_nick is not None else "default_irc_nick"
 irc_chan = ns.irc_chan if ns.irc_chan is not None else "default_irc_chan"
 chan_key = ns.chan_key if ns.chan_key is not None else "default_chan_key"
+bot_key = ns.bot_key if ns.bot_key is not None else "default_bot_key"
 irc_auth = ns.irc_auth if ns.irc_auth is not None else "default_irc_auth"
 priv_user = ns.priv_user if ns.priv_user is not None else "default_priv_user"
 debug = ns.debug if ns.debug is not None else "default_debug"
 verbose = ns.verbose if ns.verbose is not None else "default_verbose"
 very_verbose = ns.very_verbose if ns.very_verbose is not None else "default_very_verbose"
+
 base64_on = ns.base64_on if ns.base64_on is not None else "default_base64_on"
 notice = ns.notice if ns.notice is not None else "default_notice"
 
@@ -397,6 +485,8 @@ PORT = int(irc_port)
 NICK = irc_nick
 CHANNEL = irc_chan
 KEY = chan_key
+dispass = str(bot_key)
+
 
 if notice:
     notice=True
@@ -426,11 +516,12 @@ if verbose:
     print("MQTT Info: %s@%s:%s, subscribe to: %s, publish to: %s " % (mq_user, mq_host, mq_port, mq_subtop, mq_pubtop))
     print("Connecting to ircd...")
 
+
 try:
     s=socket.socket( )
     s.connect((HOST, PORT))
     connect_irc(irc_auth,KEY)
-    listen_irc(irc_auth,KEY)
+    listen_irc(irc_auth,KEY,dispass)
 except KeyboardInterrupt:
     print("Caught signal, shutting down...")
     sys.exit(0)
