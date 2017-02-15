@@ -273,7 +273,7 @@ def on_message(client, userdata, msg):
                 ircsend("PRIVMSG",CHANNEL,message)
                 return
         else:
-            decoded = decoded.replace("\"bot version:", "\"bot version\":") # hack cause my json was invalid
+            decoded = decoded
             if debug:
                 print(decoded)
             try:
