@@ -12,6 +12,40 @@ MQTT Shell to IRC Bridge
 - paho-mqtt<br> 
  --install on linux : pip install paho-mqtt <br>
  -- alternatively: pip install -r requirements.txt<br>
+## Demo:
+<pre>
+08:53 -!- mqirc [~mqirc@127.0.0.1] has joined #mqtt
+08:53 <@anon> @help
+08:53 < mqirc> ======== MQIRC Version 1.4 Beta Bot Commands ========
+08:53 < mqirc> Bot responds to the following commands
+08:53 < mqirc> @cmd <message> : Send a message to pubtopic
+08:53 < mqirc> @help : Show this help
+08:53 < mqirc> @die : Shut down bot
+08:53 < mqirc> @echo <string> : Echo a message
+08:53 < mqirc> ======= Authentication Commands ========:
+08:53 < mqirc> @enable <password> : Authenticate to and enable the boT
+08:53 < mqirc> @disable <password> : Lock bot. When disabled will only respond to @help
+08:53 < mqirc> @userlist : Send list of authorized senders
+08:53 < mqirc> @adduser <user/#channel> : Append nick/channel to authorized senders
+08:53 < mqirc> @deluser <user/#channel> : Remove nick/channel from authorized senders
+08:53 < mqirc> ======== IRC Commands ========:
+08:53 < mqirc> @irc : <command> : Send a raw irc command to server
+08:53 < mqirc> @register <password> <email> : Register bot with nickserv
+08:53 < mqirc> @join : <channel> : Join this channel
+08:53 < mqirc> @part : <channel> : Leave this channel
+08:53 < mqirc> ======== ========= ========
+08:53 <@anon> @enable mqirc
+08:53 < mqirc> Sucess. System ready.
+08:54 <@anon> @echo "Hello, World!"
+08:54 < mqirc> "Hello, World!"
+08:54 <@anon> @cmd This string will be published to mq_subtop
+08:54 <@anon> @userlist
+08:54 < mqirc> Current whitelisted channels and users
+08:54 < mqirc> ['shellz', 'kek', '#mqtt', 'anon']
+08:55 <@anon> @die
+08:55 < mqirc> Shutting down...
+08:55 -!- mqirc [~mqirc@127.0.0.1] has quit [Client closed connection]
+</pre>
 
 ## Usage:
 
