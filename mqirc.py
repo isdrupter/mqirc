@@ -21,7 +21,7 @@ print("""
 import socket,string,time,re,binascii,base64,operator,json,argparse,sys
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-auth_senders = ['shellz', 'kek', '#mqtt']
+auth_users = ['shellz', 'kek', '#mqtt']
 # version of this bot
 bot_version = "1.4 Beta"
 # initialize some vars
