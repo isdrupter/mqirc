@@ -273,7 +273,7 @@ def on_message(client, userdata, msg):
                 ircsend("PRIVMSG",CHANNEL,message)
                 return
         else:
-            decoded = decoded
+            decoded = message
             if debug:
                 print(decoded)
             try:
