@@ -18,6 +18,8 @@ MQTT Shell to IRC Bridge
 - To bridge mqtt traffic on your localhost from topic shell/incoming and to topic shell/outgoing ,<br>
   to an irc server in channel #mqtt:<br>
   `python mqirc -s  'shell/outgoing' -t  'shell/incoming' -m localhost -c '#mqtt' -i localhost -I 6667`
+- Authenticate with bot: @enable password (default password :mqirc , set with -K passwordhere)
+- Add your nick and channels to `auth_users` whitelist array before first run (default: shellz, #mqtt)
 - To send a message, "@cmd message to send here>"
 - To get usage, "@help'
 - To kill the bot, "@die"
@@ -57,10 +59,10 @@ MQTT Shell to IRC Bridge
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-usage: ircmq5.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
+usage: mqirc3.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
                  [-s MQ_SUBTOP] [-t MQ_PUBTOP] [-i IRC_HOST] [-I IRC_PORT]
                  [-n IRC_NICK] [-c IRC_CHAN] [-k CHAN_KEY] [-a IRC_AUTH]
-                 [-U PRIV_USER] [-d [DEBUG]] [-v [VERBOSE]]
+                 [-K BOT_KEY] [-U PRIV_USER] [-d [DEBUG]] [-v [VERBOSE]]
                  [-vv [VERY_VERBOSE]] [-b [BASE64_ON]] [-N [NOTICE]]
 
 optional arguments:
@@ -89,6 +91,8 @@ optional arguments:
                         Channel key
   -a IRC_AUTH, --irc_auth IRC_AUTH
                         Password to auth with nickserv
+  -K BOT_KEY, --bot_key BOT_KEY
+                        Password to auth with bot
   -U PRIV_USER, --priv_user PRIV_USER
                         Irc bot owner
   -d [DEBUG], --debug [DEBUG]
@@ -101,6 +105,7 @@ optional arguments:
                         Base64
   -N [NOTICE], --notice [NOTICE]
                         Respond to notices
+
 
 </pre>
 
