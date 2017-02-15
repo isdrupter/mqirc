@@ -42,7 +42,6 @@ MQTT Shell to IRC Bridge
 08:54 < mqirc> '192.168.99.3' ' 08:57:07 up 3 days, 12:41, 20 users,  load average: 1.93, 1.93, 1.78'
 08:54 < mqirc> '192.168.99.6' ' 05:26:05 up 2 days, 12:41, 10 users,  load average: 0.89, 0.93, 0.78'
 08:54 < mqirc> '192.168.99.7' ' 01:33:04 up 1 days, 12:41, 13 users,  load average: 2.02, 2.93, 2.58'
-
 08:54 <@anon> @userlist
 08:54 < mqirc> Current whitelisted channels and users
 08:54 < mqirc> ['shellz', 'kek', '#mqtt', 'anon']
