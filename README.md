@@ -7,6 +7,14 @@ MQTT Shell to IRC Bridge
 
 <p>This was written for use with mqtt shells, but you can use it for pretty much any situation where you want to interact with mqtt over irc.</p>
 
+## What's New:
+ - Merged config file parsing: get args from both/either the command line and/or a configuration file
+ - Clean up argparse
+ - Add user access controls (to whitelist users and channels)
+ - Fix single quote parsing for outgoing messages
+ - Fix broken user mode synax (sorry, my bad)
+ - Other minor fixes
+
 ## Requirements:
 
 - paho-mqtt<br> 
@@ -69,10 +77,9 @@ MQTT Shell to IRC Bridge
 ## Caveats:
 
 - You may need to configure your irc server to not kick floods if you have a lot of clients (for unreal, compile with fakelag configurable)
-- Currently does not properly parse single quotes in outgoing mqtt messages. This will be fixed soon, use double quotes instead for now.
+- Everything else is fixed, so you tell me!
 ## TODO:
 
-- fix single quote parsing for outgoing mqtt messages
 - implement irc tls
 - implement mqtt tls
 - add options to change/specifiy topics while running
@@ -96,53 +103,43 @@ MQTT Shell to IRC Bridge
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-usage: mqirc3.py [-h] [-m MQ_HOST] [-p MQ_PORT] [-u MQ_USER] [-P MQ_PASS]
-                 [-s MQ_SUBTOP] [-t MQ_PUBTOP] [-i IRC_HOST] [-I IRC_PORT]
-                 [-n IRC_NICK] [-c IRC_CHAN] [-k CHAN_KEY] [-a IRC_AUTH]
-                 [-K BOT_KEY] [-U PRIV_USER] [-d [DEBUG]] [-v [VERBOSE]]
-                 [-vv [VERY_VERBOSE]] [-b [BASE64_ON]] [-N [NOTICE]]
+Usage: mqirc [options]
 
-optional arguments:
+Options:
   -h, --help            show this help message and exit
-  -m MQ_HOST, --mq_host MQ_HOST
+  -v, --verbose         Produce verbose output
+  -d, --debug           Print debug messages
+  -V, --very_verbose    Very Verbose mode: Print all raw output
+  -b, --base64_on       Base64
+  -N, --notice          Respond to notices
+  -m MQ_HOST, --mq_host=MQ_HOST
                         Mqtt host to connect to
-  -p MQ_PORT, --mq_port MQ_PORT
+  -p MQ_PORT, --mq_port=MQ_PORT
                         Mqtt port to connect to
-  -u MQ_USER, --mq_user MQ_USER
+  -u MQ_USER, --mq_user=MQ_USER
                         Mqtt user to auth with
-  -P MQ_PASS, --mq_pass MQ_PASS
+  -P MQ_PASS, --mq_pass=MQ_PASS
                         Mqtt password to authenticate with
-  -s MQ_SUBTOP, --mq_subtop MQ_SUBTOP
+  -s MQ_SUBTOP, --mq_subtop=MQ_SUBTOP
                         Mqtt topic to subscribe to
-  -t MQ_PUBTOP, --mq_pubtop MQ_PUBTOP
+  -t MQ_PUBTOP, --mq_pubtop=MQ_PUBTOP
                         Mqtt topic to publish to
-  -i IRC_HOST, --irc_host IRC_HOST
+  -i IRC_HOST, --irc_host=IRC_HOST
                         Irc host to connect to
-  -I IRC_PORT, --irc_port IRC_PORT
+  -I IRC_PORT, --irc_port=IRC_PORT
                         Irc port to connect to
-  -n IRC_NICK, --irc_nick IRC_NICK
+  -n IRC_NICK, --irc_nick=IRC_NICK
                         Nick of irc user
-  -c IRC_CHAN, --irc_chan IRC_CHAN
+  -c IRC_CHAN, --irc_chan=IRC_CHAN
                         Irc channel to join
-  -k CHAN_KEY, --chan_key CHAN_KEY
+  -k CHAN_KEY, --chan_key=CHAN_KEY
                         Channel key
-  -a IRC_AUTH, --irc_auth IRC_AUTH
+  -a IRC_AUTH, --irc_auth=IRC_AUTH
                         Password to auth with nickserv
-  -K BOT_KEY, --bot_key BOT_KEY
+  -K BOT_KEY, --bot_key=BOT_KEY
                         Password to auth with bot
-  -U PRIV_USER, --priv_user PRIV_USER
+  -U PRIV_USER, --priv_user=PRIV_USER
                         Irc bot owner
-  -d [DEBUG], --debug [DEBUG]
-                        Print debug messages
-  -v [VERBOSE], --verbose [VERBOSE]
-                        Verbose mode
-  -vv [VERY_VERBOSE], --very_verbose [VERY_VERBOSE]
-                        Very Verbose mode: Print all raw output
-  -b [BASE64_ON], --base64_on [BASE64_ON]
-                        Base64
-  -N [NOTICE], --notice [NOTICE]
-                        Respond to notices
-
 
 </pre>
 
