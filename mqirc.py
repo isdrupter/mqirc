@@ -23,7 +23,7 @@ import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 
 # version of this bot
-bot_version = "1.4 Beta"
+bot_version = "1.5 Beta"
 # initialize some vars
 CHANNEL="";CHANNEL_="";NICK="";HOST=""
 PORT='';pong_once='';priv_user="";data = ''
