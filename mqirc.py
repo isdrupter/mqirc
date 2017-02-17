@@ -132,6 +132,7 @@ def devoice(to_dv, chan):
 
 
 
+
 # Called after first pong
 def init_irc(CHANNEL_,KEY_,irc_auth_):
     if irc_auth_!="empty":
@@ -275,7 +276,8 @@ def on_message(client, userdata, msg):
                 ircsend("PRIVMSG",CHANNEL,message)
                 return
         else:
-            decoded = message
+            #decoded = message
+            decoded = decoded.replace("\"bot version:", "\"bot version\":")
             if debug:
                 print(decoded)
             try:
@@ -415,6 +417,10 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                         ircsend(action,sender,"Access denied.")
                         break
                     scount+=1
+                    # fix for 'single quote' parsing
+                    mrecv=rawbuffer.split(" :@cmd ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     print("Messages sent: %s" % scount)
                     if verbose:
                         print("Publishing message")
@@ -423,6 +429,7 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if base64_on:
                         if verbose or debug:
                             print("Encoding message...")
+                    
                         final = b64encode(final)
                         if debug:
                             print("Encoded message: \r\n %s" % final)
@@ -444,6 +451,9 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                         break
                     if verbose:
                         print("Registering with nickserv...")
+                    mrecv=rawbuffer.split(" :@register ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     register(final, sender)
                     if debug:
                         print("Registered with nickserv: %s" % final)
@@ -457,9 +467,13 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                         break
                     if verbose:
                         print("Sending raw irc command")
+                    mrecv=rawbuffer.split(" :@irc ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     if debug:
                         print("Received raw irc command:\n%s\n" % final)
                     #s.send("%s \r\n" % final)
+
                     ircsend(null,null,final)
                 # echo something
                 elif re.match(r'^:@echo.*$', line[3]):
@@ -469,6 +483,9 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if not bot_whitelist(sender, action):
                         ircsend(action,sender,"Access denied.")
                         break
+                    mrecv=rawbuffer.split(" :@echo ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     if debug:
                         print("Received PRIVMSG command:'%s'" % final)
                     ircsend(action,sender,final)
@@ -521,6 +538,9 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if not bot_whitelist(sender, action):
                         ircsend(action,sender,"Access denied.")
                         break
+                    mrecv=rawbuffer.split(" :@adduser ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     if verbose:
                         print("Request to authorized %s from %s" % (final,sender))
                     append_auth_users(action,sender,final)
@@ -532,6 +552,9 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if not bot_whitelist(sender, action):
                         ircsend(action,sender,"Access denied.")
                         break
+                    mrecv=rawbuffer.split(" :@deluser ")
+                    final=mrecv[1]
+                    final=final.strip("\r\n")
                     if verbose:
                         print("Request to remove %s from %s" % (final,sender))
                     delete_auth_users(action,sender,final)
@@ -583,9 +606,9 @@ def getMergedConfig(filename):
     filecfg = Config(filename)
     parser = OptionParser()
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Produce verbose output')
-    parser.add_option('-d','--debug', nargs='?', default=False, help='Print debug messages')
-    parser.add_option('-V','--very_verbose', nargs='?', default=False, help='Very Verbose mode: Print all raw output')
-    parser.add_option('-b','--base64_on', nargs='?', default=False, help='Base64')
+    parser.add_option('-d','--debug', action='store_true', dest='debug', help='Print debug messages')
+    parser.add_option('-V','--very_verbose', action='store_true', dest='very_verbose', help='Very Verbose mode: Print all raw output')
+    parser.add_option('-b','--base64_on', action='store_true', dest='base64_on', help='Base64')
     parser.add_option('-N','--notice', action='store_true', dest='notice', help='Respond to notices')
 
     parser.add_option('-m','--mq_host',default='localhost', help='Mqtt host to connect to')
@@ -609,7 +632,7 @@ def getMergedConfig(filename):
     cfglist.append(filecfg)
     return cfglist, args
 
-auth_users = ['shellz', 'kek', '#mqtt']
+auth_users = ['anon', '#mqtt']
 
 cfg, args = getMergedConfig('mqconfig.cfg')
 
