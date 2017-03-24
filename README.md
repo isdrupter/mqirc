@@ -7,7 +7,22 @@ MQTT Shell to IRC Bridge
 
 <p>This was written for use with mqtt shells, but you can use it for pretty much any situation where you want to interact with mqtt over irc.</p>
 
+## [\*Note] about JSON:
+<p> If you want to parse json replies from your mqtt subscribed topic, than you need to edit the json fields you want to display. If you are not using json, than don't worry about this.</p>
+
+
 ## What's New:
+ 
+ Version 2.2:
+ 
+ - Added logging and better nick/user/ident parsing for security
+ - Added library for easy irc color/string formatting
+ - Added local shell interface
+ - Added a bash wrapper to start, stop, and restart mqirc
+ - Other Minor changes
+ 
+Previous version:
+ 
  - Merged config file parsing: get args from both/either the command line and/or a configuration file
  - Clean up argparse
  - Add user access controls (to whitelist users and channels)
@@ -30,6 +45,7 @@ MQTT Shell to IRC Bridge
 08:53 < mqirc> @help : Show this help
 08:53 < mqirc> @die : Shut down bot
 08:53 < mqirc> @echo <string> : Echo a message
+08:53 < mqirc> @shell <command> : Execute a local shell command
 08:53 < mqirc> ======= Authentication Commands ========:
 08:53 < mqirc> @enable <password> : Authenticate to and enable the boT
 08:53 < mqirc> @disable <password> : Lock bot. When disabled will only respond to @help
@@ -83,7 +99,6 @@ MQTT Shell to IRC Bridge
 - implement irc tls
 - implement mqtt tls
 - add options to change/specifiy topics while running
-- logging
 
 <pre>
                                               _..._     
@@ -103,15 +118,17 @@ MQTT Shell to IRC Bridge
                    ~ MqTT-IRC Bridge ~
                        ShellzRuS 2017
 
-Usage: mqirc [options]
+Usage: mqirc.py [options]
 
 Options:
   -h, --help            show this help message and exit
   -v, --verbose         Produce verbose output
   -d, --debug           Print debug messages
   -V, --very_verbose    Very Verbose mode: Print all raw output
+  -S, --shell_enabled   Enable system shell (potentially dangerous!)
   -b, --base64_on       Base64
   -N, --notice          Respond to notices
+  -C, --cleaner         Simplify output of mqtt json
   -m MQ_HOST, --mq_host=MQ_HOST
                         Mqtt host to connect to
   -p MQ_PORT, --mq_port=MQ_PORT
@@ -140,7 +157,6 @@ Options:
                         Password to auth with bot
   -U PRIV_USER, --priv_user=PRIV_USER
                         Irc bot owner
-
 </pre>
 
 ## License:
