@@ -1,7 +1,6 @@
 #!/bin/bash
 ###############################################
-echo "Bash wrapper script for mqirc"
-
+# Shell Wrapper to start/stop/restart mqirc
 wdir=/home/mqirc/bin
 pidfile=$wdir/mqirc.pid
 
@@ -10,8 +9,13 @@ pidfile=$wdir/mqirc.pid
 cd $wdir
 
 start(){
+python mqirc.py
+if [[ "$?" -eq "0" ]] ; then echo Success ; else echo Failed;fi
+}
+
+start_daemon(){
 echo 'Starting mqirc'
-python mqirc.py >> mqirc.log 2>&1 & echo "$!" >$pidfile
+python mqirc.py > /dev/null 2>&1 & echo "$!" >$pidfile
 if [[ "$?" -eq "0" ]] ; then echo Success ; else echo Failed;fi
 }
 
@@ -28,16 +32,18 @@ stop
 
 -r|--restart)
 stop
-start
+start_daemon
 ;;
 
 -h|--help)
 echo 'MqIRC Wrapper'
 echo '-- Usage: --'
-echo 'mqirc <-s|--start><-r|--restart><-k|--kill>'
+echo 'mqirc <-d|--daemon><-s|--start><-r|--restart><-k|--kill>'
 
 ;;
-
+-d|--daemon)
+start_daemon
+;;
 -s|--start|*)
 start
 ;;
