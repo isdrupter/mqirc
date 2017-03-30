@@ -18,7 +18,7 @@ MQTT Shell to IRC Bridge
  - Added logging and better nick/user/ident parsing for security
  - Added library for easy irc color/string formatting
  - Added local shell interface
- - Added a bash wrapper to start, stop, and restart mqirc
+ - Added a bash wrapper to start, start deamonized, stop, and restart mqirc
  - Other Minor changes
  
 Previous version:
@@ -31,10 +31,10 @@ Previous version:
  - Other minor fixes
 
 ## Requirements:
-
+- both optparse and argparser, or maybe its configparse 
 - paho-mqtt<br> 
  --install on linux : pip install paho-mqtt <br>
- -- alternatively: pip install -r requirements.txt<br>
+ -- alternatively: pip install -r requirements.txt (FIXME)<br>
 ## Demo:
 <pre>
 08:53 -!- mqirc [~mqirc@127.0.0.1] has joined #mqtt
